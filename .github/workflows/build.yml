@@ -99,3 +99,38 @@ jobs:
           path: target/semcode.jar
           if-no-files-found: error
           retention-days: 14
+
+  deploy:
+    name: Deploy Semcode container
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GitHub Container Registry
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io \
+            --username "${{ github.actor }}" --password-stdin
+
+      - name: Pull published Docker image
+        shell: bash
+        run: |
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker pull "$IMAGE_NAME:${GITHUB_SHA}"
+
+      - name: Deploy and verify container
+        shell: bash
+        run: |
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker run --rm --name semcode-deploy "$IMAGE_NAME:${GITHUB_SHA}"
+
+      - name: Log out of registry
+        if: always()
+        shell: bash
+        run: docker logout ghcr.io
