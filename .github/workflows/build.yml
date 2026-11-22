@@ -21,20 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    # Temporary MySQL database used only for CI integration tests.
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: ci_test_password
-          MYSQL_DATABASE: world
-        ports:
-          - 3307:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -pci_test_password"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+    env:
+      COMPOSE_PROJECT_NAME: semcode-ci
+      COMPOSE_FILE: docker-compose.yml:docker-compose.test.yml
+      SEMCODE_IMAGE: semcode:ci
+      DB_URL: jdbc:mysql://127.0.0.1:3307/world?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=10000&socketTimeout=30000
+      DB_USER: semuser
+      DB_PASSWORD: ci_test_password
+      MYSQL_ROOT_PASSWORD: ci_root_password
 
     steps:
       - name: Check out source
@@ -50,29 +44,22 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
-      - name: Import World database
-        run: |
-          docker exec -i "${{ job.services.mysql.id }}" \
-            mysql -uroot -pci_test_password world \
-            < world-db/world.sql
+      - name: Start and initialize the World database
+        run: docker compose up --detach --wait --wait-timeout 180 mysql
 
       - name: Build and test with Maven
-        env:
-          DB_URL: jdbc:mysql://localhost:3307/world
-          DB_USER: root
-          DB_PASSWORD: ci_test_password
         run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: Run the executable JAR
+      - name: Run the executable JAR against MySQL
         timeout-minutes: 1
         run: java -jar target/semcode.jar
 
-      - name: Build the Docker image
-        run: docker build --tag semcode:ci .
+      - name: Build the Docker image from source
+        run: docker compose build app
 
-      - name: Run the application in Docker
-        timeout-minutes: 1
-        run: docker run --rm --network none semcode:ci
+      - name: Run the application and MySQL with Compose
+        timeout-minutes: 4
+        run: docker compose up --no-build --abort-on-container-exit --exit-code-from app
 
       # Only trusted pushes to develop publish an image; pull requests do not.
       - name: Log in to GitHub Container Registry
@@ -100,8 +87,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Show container logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: semcode-test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          retention-days: 14
+
+      - name: Remove this CI database and containers
+        if: always()
+        run: docker compose down --volumes --remove-orphans
+
   deploy:
-    name: Deploy Semcode container
+    name: Deploy Semcode with MySQL
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: [self-hosted, Linux, X64]
@@ -109,7 +114,19 @@ jobs:
     permissions:
       contents: read
       packages: read
+    env:
+      # Every deployment verifies a fresh database without touching another run.
+      COMPOSE_PROJECT_NAME: semcode-deploy-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
+      - name: Check out Compose and database files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select published image
+        shell: bash
+        run: echo "SEMCODE_IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
       - name: Log in to GitHub Container Registry
         shell: bash
         env:
@@ -118,19 +135,21 @@ jobs:
           echo "$GHCR_TOKEN" | docker login ghcr.io \
             --username "${{ github.actor }}" --password-stdin
 
-      - name: Pull published Docker image
-        shell: bash
-        run: |
-          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
-          docker pull "$IMAGE_NAME:${GITHUB_SHA}"
+      - name: Pull published application and MySQL images
+        run: docker compose pull app mysql
 
-      - name: Deploy and verify container
-        shell: bash
-        run: |
-          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
-          docker run --rm --name semcode-deploy "$IMAGE_NAME:${GITHUB_SHA}"
+      - name: Deploy and verify database report
+        timeout-minutes: 4
+        run: docker compose up --no-build --abort-on-container-exit --exit-code-from app
+
+      - name: Show deployment logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Remove this verification deployment
+        if: always()
+        run: docker compose down --volumes --remove-orphans
 
       - name: Log out of registry
         if: always()
-        shell: bash
         run: docker logout ghcr.io

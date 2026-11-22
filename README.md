@@ -1,12 +1,12 @@
 # Semcode – Population Reporting System
 
-[![Master Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml?query=branch%3Amaster)
+[![Master Build](https://github.com/Semcode-1/Semcode/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/Semcode-1/Semcode/actions/workflows/build.yml?query=branch%3Amaster)
 
-[![Develop Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml?query=branch%3Adevelop)
+[![Develop Build](https://github.com/Semcode-1/Semcode/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/Semcode-1/Semcode/actions/workflows/build.yml?query=branch%3Adevelop)
 
-[![Latest Release](https://img.shields.io/github/v/release/zoiegregory-pixel/Semcode)](https://github.com/zoiegregory-pixel/Semcode/releases)
+[![Latest Release](https://img.shields.io/github/v/release/Semcode-1/Semcode)](https://github.com/Semcode-1/Semcode/releases)
 
-[![License](https://img.shields.io/github/license/zoiegregory-pixel/Semcode)](https://github.com/zoiegregory-pixel/Semcode/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/Semcode-1/Semcode)](https://github.com/Semcode-1/Semcode/blob/master/LICENSE)
 ## Project Overview
 
 Semcode is a collaborative DevOps coursework project for SET09803. The project develops a Population Reporting System using the MySQL World database. It demonstrates software development, version control, continuous integration, containerisation, documentation and release management.
@@ -42,65 +42,124 @@ The project follows a Gitflow-inspired branching strategy:
 6. Merge the approved release into `master`.
 7. Publish the release with a version tag.
 
-## Build and Run
+## Getting Started
 
-### Requirements
-
-- Java Development Kit (JDK) 17
-- Apache Maven 3.9 or later
-- Docker
-
-### Build the Application
-
-Run the following command:
+Install and start Docker Desktop (or Docker Engine with the Compose plugin).
+A local Java or Maven installation is **not required** for the container run.
+From a fresh checkout of this implementation:
 
 ```bash
+git clone --branch develop https://github.com/Semcode-1/Semcode.git
+cd Semcode
+./scripts/run.sh
+```
+
+While the integration pull request is awaiting merge, check out
+`feature/compose-database-integration` instead of `develop` to try it.
+
+The script runs this command from the repository root:
+
+```bash
+docker compose up --build --abort-on-container-exit --exit-code-from app
+```
+
+Docker builds the Java 17 executable JAR with Maven. Compose initializes MySQL
+from `world-db/world.sql`, waits until the application user can query the schema,
+then starts the Java application. The application queries the five most populous
+countries and prints code, name, continent, region, population and capital.
+These are the historical figures supplied by the World dataset.
+
+Expected output includes:
+
+```text
+Successfully connected to the World database
+Top 5 countries by population:
+Code | Name | Continent | Region | Population | Capital
+CHN | China | Asia | Eastern Asia | 1277558000 | Peking
+```
+
+The report is a command-line application: it finishes with exit code 0 and Compose
+stops MySQL. The message “Aborting on container exit” is expected after the report.
+Configuration, connection or query failures return a nonzero exit code.
+Change the report size with `TOP_N=10 ./scripts/run.sh`.
+
+### Database settings and stopping
+
+The app uses the internal Compose hostname `mysql` and port `3306`. No database
+port is exposed to the host during a normal run. Compose supplies `DB_URL`,
+`DB_USER` and `DB_PASSWORD`; running the IntelliJ green button without those
+settings will not start the database.
+
+The default credentials (`semuser` / `sempass`, root password `rootpass`) are for
+this local coursework database. Override `DB_PASSWORD` and `MYSQL_ROOT_PASSWORD`
+in your environment before first initialization if needed. No credentials are
+needed in Java source. The application uses `semuser`, not root.
+
+```bash
+docker compose down
+```
+
+This removes the project's containers and network while retaining its database
+volume. MySQL only applies initialization SQL, passwords and database grants on
+an empty volume. If reusing a database created by the old Compose file, the
+application user's World grants may be missing. To retain that data, an administrator
+can grant `semuser` access to `world.*`. For an explicitly disposable coursework
+copy, `docker compose down --volumes` deletes that project's database so the next
+run imports the supplied dataset again. Do not use that command on data you need.
+
+### Unit and database integration tests
+
+For host-side development, install JDK 17 and Maven 3.9 or later.
+Unit tests run without MySQL:
+
+```bash
+mvn --batch-mode --no-transfer-progress test
+```
+
+Full verification needs the database. Use an isolated Compose project and a
+localhost-only test port so this does not reuse your regular database:
+
+```bash
+export COMPOSE_PROJECT_NAME=semcode-tests
+export COMPOSE_FILE=docker-compose.yml:docker-compose.test.yml
+export MYSQL_PORT=3307
+export DB_USER=semuser
+export DB_PASSWORD=sempass
+export DB_URL="jdbc:mysql://127.0.0.1:${MYSQL_PORT}/world?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=10000&socketTimeout=30000"
+docker compose up --detach --wait --wait-timeout 180 mysql
 mvn --batch-mode --no-transfer-progress clean verify
+java -jar target/semcode.jar 5
+docker compose down --volumes
+unset COMPOSE_PROJECT_NAME COMPOSE_FILE MYSQL_PORT DB_USER DB_PASSWORD DB_URL
 ```
 
-### Run the Java Application
-
-```bash
-java -jar target/semcode.jar
-```
-
-### Build the Docker Image
-
-```bash
-docker build --tag semcode:local .
-```
-
-### Run the Docker Container
-
-Run the following command:
-
-`docker run --rm --network none semcode:local`
+Choose another `MYSQL_PORT` if 3307 is occupied. The cleanup above deletes only
+the disposable `semcode-tests` database. Surefire runs unit tests; Failsafe runs
+integration tests against MySQL, including the original city-data check,
+country ordering and capital lookup, application output, and failed authentication.
+Reports are written to `target/surefire-reports` and `target/failsafe-reports`.
 
 ## Continuous Integration – GitHub Actions
 
-The project uses GitHub Actions to automate the build and verification process.
+`.github/workflows/build.yml` runs on selected branch pushes and pull requests:
 
-The workflow is named **Java and Docker CI** and is located at:
+1. Start a fresh MySQL database using the same Compose configuration.
+2. Run Maven unit and integration tests and build the executable JAR.
+3. Run the JAR against MySQL.
+4. Build the application image from source and run app + MySQL through Compose.
+5. Save the JAR and test reports for 14 days; show logs and remove CI resources.
 
-`.github/workflows/build.yml`
+Muhammad's GHCR publishing and self-hosted deployment are retained. A successful
+push to `develop` publishes the tested image with commit-SHA and `latest` tags.
+The deployment job pulls that exact SHA image and runs it with a fresh MySQL
+container through Compose on the self-hosted Linux X64 runner. The runner needs
+Docker Compose and access to GHCR. It verifies the report and then removes its
+own temporary database; this CLI application is not a long-running web service.
+Feature branches and pull requests do not publish or deploy.
 
-The workflow includes:
-
-- Checking out the repository.
-- Setting up Java 17.
-- Running the Maven verification build.
-- Running the packaged Java application.
-- Building the Docker image.
-- Running the application inside a Docker container.
-- Saving the build artifact for 14 days.
-
-The workflow is configured to run on selected branch pushes and pull requests.
-
-### Testing
-
-The Maven verification process checks that the project builds successfully. The workflow also checks that the packaged application and Docker container can start.
-
-Automated unit and integration test coverage has not yet been configured. Therefore, no code coverage percentage is currently reported.
+This completes the initial Java-to-database execution path. The other coursework
+reports and code coverage reporting remain separate work; this demonstration does
+not claim that all 32 requirements are implemented.
 
 ## Releases
 
@@ -108,10 +167,10 @@ The project has published the following releases:
 
 | Version | Release Date |
 |---|---|
-| [v1.0.0](https://github.com/zoiegregory-pixel/Semcode/releases/tag/v1.0.0) | 13 October 2026 |
-| [v1.1.0](https://github.com/zoiegregory-pixel/Semcode/releases/tag/v1.1.0) | 14 October 2026 |
+| [v1.0.0](https://github.com/Semcode-1/Semcode/releases/tag/v1.0.0) | 13 October 2026 |
+| [v1.1.0](https://github.com/Semcode-1/Semcode/releases/tag/v1.1.0) | 14 October 2026 |
 
-See the [GitHub Releases page](https://github.com/zoiegregory-pixel/Semcode/releases) for release details.
+See the [GitHub Releases page](https://github.com/Semcode-1/Semcode/releases) for release details.
 
 ## Team Collaboration
 

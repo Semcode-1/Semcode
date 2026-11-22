@@ -1,0 +1,5 @@
+# Only host-side Maven/JAR tests need a published database port.
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
