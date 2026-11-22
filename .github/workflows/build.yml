@@ -20,6 +20,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Start a temporary MySQL database for integration testing
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_password
+          MYSQL_DATABASE: world
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -pci_test_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,7 +49,19 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
+      # Import the World database into the temporary MySQL container
+      - name: Import World database
+        run: |
+          docker exec -i "${{ job.services.mysql.id }}" \
+            mysql -uroot -pci_test_password world \
+            < world-db/world.sql
+
+      # Execute unit tests and integration tests
       - name: Build and test with Maven
+        env:
+          DB_URL: jdbc:mysql://localhost:3307/world
+          DB_USER: root
+          DB_PASSWORD: ci_test_password
         run: mvn --batch-mode --no-transfer-progress clean verify
 
       - name: Run the executable JAR
@@ -44,7 +71,7 @@ jobs:
       - name: Build the Docker image
         run: docker build --tag semcode:ci .
 
-      # The current starter exits after printing a message and needs no database.
+      # Run the starter application in Docker
       - name: Run the application in Docker
         timeout-minutes: 1
         run: docker run --rm --network none semcode:ci
