@@ -1,13 +1,10 @@
 # Semcode – Population Reporting System
 
-
 ![Master Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=master)
-
 ![Develop Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=develop)
-
 ![Latest Release](https://img.shields.io/github/v/release/zoiegregory-pixel/Semcode)
-
 ![License](https://img.shields.io/github/license/zoiegregory-pixel/Semcode)
+
 
 ## Project Overview
 
