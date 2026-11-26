@@ -56,19 +56,23 @@ jobs:
             mysql -uroot -pci_test_password world \
             < world-db/world.sql
 
+      
       - name: Build and test with Maven
         env:
           DB_URL: jdbc:mysql://localhost:3307/world
           DB_USER: root
           DB_PASSWORD: ci_test_password
         run: mvn --batch-mode --no-transfer-progress clean verify
-        -name: Save JaCoCo coverage report
+
+      - name: Save JaCoCo coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-coverage-report
           path: target/site/jacoco/
           if-no-files-found: warn
-          retention-days:14      - name: Run the executable JAR
+          retention-days: 14
+
+      - name: Run the executable JAR
         timeout-minutes: 1
         run: java -jar target/semcode.jar
 
