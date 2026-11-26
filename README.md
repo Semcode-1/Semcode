@@ -9,7 +9,6 @@
 
 ![License](https://img.shields.io/github/license/zoiegregory-pixel/Semcode)
 
-
 ## Project Overview
 
 Semcode is a collaborative DevOps coursework project for SET09803. The project develops a Population Reporting System using the MySQL World database. It demonstrates software development, version control, continuous integration, containerisation, documentation and release management.
