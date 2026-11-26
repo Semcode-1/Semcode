@@ -1,11 +1,10 @@
 # Semcode – Population Reporting System
 
-![Master Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=master)
-![Develop Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=develop)
-![Latest Release](https://img.shields.io/github/v/release/zoiegregory-pixel/Semcode)
-![License](https://img.shields.io/github/license/zoiegregory-pixel/Semcode)
-
-
+[![Master Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml)
+[![Develop Build](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml)
+[![Test Coverage](.github/badges/jacoco.svg)](https://github.com/zoiegregory-pixel/Semcode/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/zoiegregory-pixel/Semcode)](https://github.com/zoiegregory-pixel/Semcode/releases/latest)
+[![License](https://img.shields.io/github/license/zoiegregory-pixel/Semcode)](https://github.com/zoiegregory-pixel/Semcode/blob/master/LICENSE)
 ## Project Overview
 
 Semcode is a collaborative DevOps coursework project for SET09803. The project develops a Population Reporting System using the MySQL World database. It demonstrates software development, version control, continuous integration, containerisation, documentation and release management.
