@@ -100,18 +100,20 @@ The workflow is configured to run on selected branch pushes and pull requests.
 
 The Maven verification process checks that the project builds successfully. The workflow also checks that the packaged application and Docker container can start.
 
-Automated unit and integration test coverage has not yet been configured. Therefore, no code coverage percentage is currently reported.
+
+Automated testing is configured using JUnit 5. The project includes a test for application startup. Maven runs the tests as part of the verification build, and GitHub Actions checks the build and test results.
 
 ## Releases
-
-The project has published the following releases:
+T
+he project has published the following releases:
 
 | Version | Release Date |
 |---|---|
-| [v1.0.0](https://github.com/zoiegregory-pixel/Semcode/releases/tag/v1.0.0) | 13 October 2026 |
-| [v1.1.0](https://github.com/zoiegregory-pixel/Semcode/releases/tag/v1.1.0) | 14 October 2026 |
+| [v1.0.0](https://github.com/Semcode-1/Semcode/releases/tag/v1.0.0) | 13 October 2026 |
+| [v1.1.0](https://github.com/Semcode-1/Semcode/releases/tag/v1.1.0) | 14 October 2026 |
+| [v1.2.0](https://github.com/Semcode-1/Semcode/releases/tag/v1.2.0) | 26 November 2026 |
 
-See the [GitHub Releases page](https://github.com/zoiegregory-pixel/Semcode/releases) for release details.
+See the [GitHub Releases page](https://github.com/Semcode-1/Semcode/releases) for release details.
 
 ## Team Collaboration
 
@@ -135,4 +137,4 @@ An evidence table should be maintained to record each requirement, whether it ha
 
 ## Code Coverage
 
-Code coverage reporting has not yet been configured in the project. A coverage percentage should only be added after an appropriate testing and coverage tool has been configured and its report generated.
+Code coverage reporting is configured using JaCoCo. GitHub Actions generates the coverage report and publishes an SVG coverage badge in `.github/badges/jacoco.svg`. The coverage percentage is displayed in the Test Coverage badge.
