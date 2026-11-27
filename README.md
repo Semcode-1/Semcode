@@ -17,8 +17,8 @@ Semcode is a collaborative DevOps coursework project for SET09803. The project d
 - `docs/` – Project documentation and supporting evidence.
 - `src/main/java/` – Java application source code.
 - `use-cases/` – Use-case documentation and diagrams.
-- `world-db/` – Database resources.
-- `Dockerfile` – Docker image configuration.
+- `world-db/` – Database resources and the MySQL `Dockerfile`.
+- `Dockerfile` – Java application image configuration.
 - `docker-compose.yml` – Container configuration.
 - `pom.xml` – Maven project configuration.
 
@@ -54,17 +54,19 @@ cd Semcode
 ./scripts/run.sh
 ```
 
-While the integration pull request is awaiting merge, check out
-`feature/compose-database-integration` instead of `develop` to try it.
-
 The script runs this command from the repository root:
 
 ```bash
 docker compose up --build --abort-on-container-exit --exit-code-from app
 ```
 
-Docker builds the Java 17 executable JAR with Maven. Compose initializes MySQL
-from `world-db/world.sql`, waits until the application user can query the schema,
+Compose builds two images using two Dockerfiles: the root `Dockerfile` builds
+the Java 17 executable JAR with Maven and packages the application;
+`world-db/Dockerfile` builds MySQL and copies `world.sql` into
+`/docker-entrypoint-initdb.d/` for initialization on an empty database volume.
+This follows the professor's [two-Dockerfile example](https://github.com/Kevin-Sim/sem-quick-cw#set-up-world-database),
+using our existing `world-db` folder and `mysql` service name.
+Compose waits until the application user can query the schema,
 then starts the Java application. The application queries the five most populous
 countries and prints code, name, continent, region, population and capital.
 These are the historical figures supplied by the World dataset.
@@ -126,7 +128,7 @@ export MYSQL_PORT=3307
 export DB_USER=semuser
 export DB_PASSWORD=sempass
 export DB_URL="jdbc:mysql://127.0.0.1:${MYSQL_PORT}/world?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=10000&socketTimeout=30000"
-docker compose up --detach --wait --wait-timeout 180 mysql
+docker compose up --build --detach --wait --wait-timeout 180 mysql
 mvn --batch-mode --no-transfer-progress clean verify
 java -jar target/semcode.jar 5
 docker compose down --volumes
@@ -143,17 +145,17 @@ Reports are written to `target/surefire-reports` and `target/failsafe-reports`.
 
 `.github/workflows/build.yml` runs on selected branch pushes and pull requests:
 
-1. Start a fresh MySQL database using the same Compose configuration.
+1. Build the database image and start a fresh MySQL database using Compose.
 2. Run Maven unit and integration tests and build the executable JAR.
 3. Run the JAR against MySQL.
 4. Build the application image from source and run app + MySQL through Compose.
 5. Save the JAR and test reports for 14 days; show logs and remove CI resources.
 
-Muhammad's GHCR publishing and self-hosted deployment are retained. A successful
+Both jobs use GitHub-hosted runners. A successful
 push to `develop` publishes the tested image with commit-SHA and `latest` tags.
-The deployment job pulls that exact SHA image and runs it with a fresh MySQL
-container through Compose on the self-hosted Linux X64 runner. The runner needs
-Docker Compose and access to GHCR. It verifies the report and then removes its
+The deployment job pulls that exact SHA image, builds the database image from
+`world-db/Dockerfile`, and runs both through Compose on `ubuntu-24.04`.
+It verifies the report and then removes its
 own temporary database; this CLI application is not a long-running web service.
 Feature branches and pull requests do not publish or deploy.
 
