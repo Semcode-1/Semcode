@@ -45,7 +45,7 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Start and initialize the World database
-        run: docker compose up --detach --wait --wait-timeout 180 mysql
+        run: docker compose up --build --detach --wait --wait-timeout 180 mysql
 
       - name: Build and test with Maven
         run: mvn --batch-mode --no-transfer-progress clean verify
@@ -135,8 +135,11 @@ jobs:
           echo "$GHCR_TOKEN" | docker login ghcr.io \
             --username "${{ github.actor }}" --password-stdin
 
-      - name: Pull published application and MySQL images
-        run: docker compose pull app mysql
+      - name: Pull published application image
+        run: docker compose pull app
+
+      - name: Build the World database image
+        run: docker compose build mysql
 
       - name: Deploy and verify database report
         timeout-minutes: 4

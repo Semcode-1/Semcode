@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    build: ./world-db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
       MYSQL_DATABASE: world
@@ -8,7 +8,6 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-sempass}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./world-db/world.sql:/docker-entrypoint-initdb.d/world.sql:ro
     healthcheck:
       # TCP avoids passing against MySQL's temporary initialization server.
       # Querying the schema also checks that import and user grants are complete.
