@@ -44,6 +44,9 @@ The project follows a Gitflow-inspired branching strategy:
 
 ## Getting Started
 
+See the [team report guide](docs/RUNNING-REPORTS.md) for the numbered selector,
+all 32 reports, GitHub downloads and examples for each teammate.
+
 Install and start Docker Desktop (or Docker Engine with the Compose plugin).
 A local Java or Maven installation is **not required** for the container run.
 From a fresh checkout of this implementation:
@@ -75,7 +78,8 @@ Expected output includes:
 
 ```text
 Successfully connected to the World database
-Top 5 countries by population:
+Report 4: Top N countries in the world
+N=5; filter=; country=
 Code | Name | Continent | Region | Population | Capital
 CHN | China | Asia | Eastern Asia | 1277558000 | Peking
 ```
@@ -84,6 +88,8 @@ The report is a command-line application: it finishes with exit code 0 and Compo
 stops MySQL. The message “Aborting on container exit” is expected after the report.
 Configuration, connection or query failures return a nonzero exit code.
 Change the report size with `TOP_N=10 ./scripts/run.sh`.
+Run Africa with `./scripts/report.sh 5 10 Africa`, or all report examples with
+`./scripts/report.sh all`. Report selection does not require editing Java code.
 
 ### Database settings and stopping
 
@@ -159,9 +165,10 @@ It verifies the report and then removes its
 own temporary database; this CLI application is not a long-running web service.
 Feature branches and pull requests do not publish or deploy.
 
-This completes the initial Java-to-database execution path. The other coursework
-reports and code coverage reporting remain separate work; this demonstration does
-not claim that all 32 requirements are implemented.
+All 32 reporting requirements now have Java/JDBC implementations and automated
+integration checks. CI runs all 32 with documented example inputs; manual runs can
+select a report and its inputs. Download output from the `population-reports` artifact.
+Code coverage reporting and the remaining assessment administration are separate work.
 
 ## Releases
 
@@ -186,13 +193,45 @@ This README provides an overview of the project, its repository structure, branc
 
 The system requirements are based on the 32 functional requirements specified for the coursework.
 
-The number of requirements successfully implemented and the percentage achieved should be completed after checking the application against the requirements.
+32 of 32 reporting requirements have Java implementations (100%). This is functional
+implementation status, not completion of the entire assessment. Automated checks cover
+all 32 using the supplied dataset and documented examples. The team must still capture
+and review actual application screenshots for the final evidence table.
 
-An evidence table should be maintained to record each requirement, whether it has been met, and the supporting screenshot.
-
-| Requirement ID | Requirement Name | Met (Yes/No) | Evidence |
+| ID | Requirement | Implemented | Screenshot |
 |---|---|---|---|
-| To be completed | To be completed | To be verified | Screenshot to be added |
+| 1 | All countries in the world | Yes | Pending team capture |
+| 2 | All countries in the continent | Yes | Pending team capture |
+| 3 | All countries in the region | Yes | Pending team capture |
+| 4 | Top N countries in the world | Yes | Pending team capture |
+| 5 | Top N countries in the continent | Yes | Pending team capture |
+| 6 | Top N countries in the region | Yes | Pending team capture |
+| 7 | All cities in the world | Yes | Pending team capture |
+| 8 | All cities in the continent | Yes | Pending team capture |
+| 9 | All cities in the region | Yes | Pending team capture |
+| 10 | All cities in the country | Yes | Pending team capture |
+| 11 | All cities in the district | Yes | Pending team capture |
+| 12 | Top N cities in the world | Yes | Pending team capture |
+| 13 | Top N cities in the continent | Yes | Pending team capture |
+| 14 | Top N cities in the region | Yes | Pending team capture |
+| 15 | Top N cities in the country | Yes | Pending team capture |
+| 16 | Top N cities in the district | Yes | Pending team capture |
+| 17 | All capital cities in the world | Yes | Pending team capture |
+| 18 | All capital cities in the continent | Yes | Pending team capture |
+| 19 | All capital cities in the region | Yes | Pending team capture |
+| 20 | Top N capital cities in the world | Yes | Pending team capture |
+| 21 | Top N capital cities in the continent | Yes | Pending team capture |
+| 22 | Top N capital cities in the region | Yes | Pending team capture |
+| 23 | Population living in cities and outside cities by continent | Yes | Pending team capture |
+| 24 | Population living in cities and outside cities by region | Yes | Pending team capture |
+| 25 | Population living in cities and outside cities by country | Yes | Pending team capture |
+| 26 | Population of the world | Yes | Pending team capture |
+| 27 | Population of the continent | Yes | Pending team capture |
+| 28 | Population of the region | Yes | Pending team capture |
+| 29 | Population of the country | Yes | Pending team capture |
+| 30 | Population of the district | Yes | Pending team capture |
+| 31 | Population of the city | Yes | Pending team capture |
+| 32 | Chinese, English, Hindi, Spanish and Arabic speakers | Yes | Pending team capture |
 
 ## Code Coverage
 
