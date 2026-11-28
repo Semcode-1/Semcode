@@ -24,7 +24,7 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/world?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=10000&socketTimeout=30000
       DB_USER: semuser
       DB_PASSWORD: ${DB_PASSWORD:-sempass}
-    command: ["${TOP_N:-5}"]
+    command: ["${TOP_N:-5}", "${REPORT:-world}"]
     depends_on:
       mysql:
         condition: service_healthy

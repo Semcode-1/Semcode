@@ -86,4 +86,34 @@ class AppIT {
         assertTrue(errors.toString().contains("Database report failed"));
         assertFalse(errors.toString().contains(environment.get("DB_PASSWORD")));
     }
+
+    @Test
+    void africaReportReturnsTenAfricanCountriesInPopulationOrder() throws Exception {
+        try (Connection connection = DriverManager.getConnection(System.getenv("DB_URL"),
+                System.getenv("DB_USER"), System.getenv("DB_PASSWORD"))) {
+            var repository = new CountryRepository(connection);
+            var countries = repository.mostPopulousInAfrica(10);
+            assertEquals(java.util.List.of("NGA", "EGY", "ETH", "COD", "ZAF",
+                            "TZA", "DZA", "KEN", "SDN", "MAR"),
+                    countries.stream().map(Country::code).toList());
+            assertTrue(countries.stream().allMatch(country -> country.continent().equals("Africa")));
+            assertEquals(111_506_000L, countries.get(0).population());
+            assertEquals("Abuja", countries.get(0).capital());
+            assertEquals(1, repository.mostPopulousInAfrica(1).size());
+            assertThrows(IllegalArgumentException.class, () -> repository.mostPopulousInAfrica(0));
+            assertThrows(IllegalArgumentException.class, () -> repository.mostPopulousInAfrica(-1));
+        }
+    }
+
+    @Test
+    void selectorPrintsAfricaReportWithoutChangingWorldwideReport() {
+        var output = new java.io.ByteArrayOutputStream();
+        var errors = new java.io.ByteArrayOutputStream();
+        assertEquals(0, App.run(new String[]{"10", "africa"}, System.getenv(),
+                new java.io.PrintStream(output), new java.io.PrintStream(errors)), errors.toString());
+        assertTrue(output.toString().contains("Top 10 countries in Africa by population:"));
+        assertTrue(output.toString().contains("NGA | Nigeria | Africa | Western Africa | 111506000 | Abuja"));
+        assertEquals(13, output.toString().lines().count());
+        assertFalse(output.toString().contains("China"));
+    }
 }

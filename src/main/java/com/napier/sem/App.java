@@ -16,23 +16,18 @@ public class App {
 
     static int run(String[] args, Map<String, String> environment, PrintStream out, PrintStream err) {
         try {
+            if (args.length == 1 && args[0].equals("--help")) {
+                Report.printHelp(out);
+                return 0;
+            }
             int limit = parseLimit(args);
+            Report report = Report.fromId(args.length == 2 ? args[1] : "world");
             String url = required(environment, "DB_URL");
             String user = required(environment, "DB_USER");
             String password = required(environment, "DB_PASSWORD");
             try (var connection = DriverManager.getConnection(url, user, password)) {
-                var countries = new CountryRepository(connection).mostPopulous(limit);
-                if (countries.isEmpty()) {
-                    throw new SQLException("The country report returned no rows");
-                }
                 out.println("Successfully connected to the World database");
-                out.println("Top " + limit + " countries by population:");
-                out.println("Code | Name | Continent | Region | Population | Capital");
-                for (Country country : countries) {
-                    out.printf("%s | %s | %s | %s | %d | %s%n", country.code(), country.name(),
-                            country.continent(), country.region(), country.population(),
-                            country.capital() == null ? "N/A" : country.capital());
-                }
+                report.print(connection, limit, out);
             }
             return 0;
         } catch (IllegalArgumentException exception) {
@@ -47,8 +42,8 @@ public class App {
     }
 
     static int parseLimit(String[] args) {
-        if (args.length > 1) {
-            throw new IllegalArgumentException("Usage: java -jar semcode.jar [positive number of countries]");
+        if (args.length > 2) {
+            throw new IllegalArgumentException("Usage: java -jar semcode.jar [positive number of countries] [report]");
         }
         try {
             int limit = args.length == 0 ? 5 : Integer.parseInt(args[0]);

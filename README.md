@@ -44,6 +44,9 @@ The project follows a Gitflow-inspired branching strategy:
 
 ## Getting Started
 
+For the report selector, GitHub download steps and instructions for adding your
+assigned reports, see the [team report guide](docs/RUNNING-REPORTS.md).
+
 Install and start Docker Desktop (or Docker Engine with the Compose plugin).
 A local Java or Maven installation is **not required** for the container run.
 From a fresh checkout of this implementation:
@@ -84,6 +87,8 @@ The report is a command-line application: it finishes with exit code 0 and Compo
 stops MySQL. The message “Aborting on container exit” is expected after the report.
 Configuration, connection or query failures return a nonzero exit code.
 Change the report size with `TOP_N=10 ./scripts/run.sh`.
+Select the Africa example with `REPORT=africa TOP_N=10 ./scripts/run.sh`.
+The default is `REPORT=world`; no source edits are needed to switch reports.
 
 ### Database settings and stopping
 
@@ -150,6 +155,9 @@ Reports are written to `target/surefire-reports` and `target/failsafe-reports`.
 3. Run the JAR against MySQL.
 4. Build the application image from source and run app + MySQL through Compose.
 5. Save the JAR and test reports for 14 days; show logs and remove CI resources.
+
+Manual runs accept `report` (`world` or `africa`) and `top_n`. The selected report
+runs as a JAR and through Compose; its text output is saved as `population-report`.
 
 Both jobs use GitHub-hosted runners. A successful
 push to `develop` publishes the tested image with commit-SHA and `latest` tags.
