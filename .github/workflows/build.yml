@@ -6,13 +6,33 @@ on:
   pull_request:
     branches: [master, develop, release, 'release/**']
   workflow_dispatch:
+    inputs:
+      report:
+        description: 'Report number (see team guide), or all for every example'
+        type: choice
+        options: ['all', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32']
+        default: all
+        required: true
+      top_n:
+        description: 'Top N (positive whole number; ignored by reports without Top N)'
+        type: string
+        default: '10'
+        required: true
+      filter:
+        description: 'Required location for filtered reports, e.g. Africa or Nigeria; blank for all'
+        type: string
+        default: ''
+      country:
+        description: 'Optional country name/code to narrow district or city names, e.g. NGA'
+        type: string
+        default: ''
 
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,6 +45,10 @@ jobs:
       COMPOSE_PROJECT_NAME: semcode-ci
       COMPOSE_FILE: docker-compose.yml:docker-compose.test.yml
       SEMCODE_IMAGE: semcode:ci
+      REPORT: ${{ inputs.report || 'all' }}
+      TOP_N: ${{ inputs.top_n || '10' }}
+      FILTER: ${{ inputs.filter || '' }}
+      COUNTRY: ${{ inputs.country || '' }}
       DB_URL: jdbc:mysql://127.0.0.1:3307/world?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=10000&socketTimeout=30000
       DB_USER: semuser
       DB_PASSWORD: ci_test_password
@@ -52,7 +76,9 @@ jobs:
 
       - name: Run the executable JAR against MySQL
         timeout-minutes: 1
-        run: java -jar target/semcode.jar
+        run: >-
+          java -jar target/semcode.jar --report "$REPORT" --limit "$TOP_N"
+          --filter "$FILTER" --country "$COUNTRY" --output target/reports
 
       - name: Build the Docker image from source
         run: docker compose build app
@@ -60,6 +86,14 @@ jobs:
       - name: Run the application and MySQL with Compose
         timeout-minutes: 4
         run: docker compose up --no-build --abort-on-container-exit --exit-code-from app
+
+      - name: Save population reports
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: population-reports
+          path: target/reports/
+          if-no-files-found: error
+          retention-days: 14
 
       # Only trusted pushes to develop publish an image; pull requests do not.
       - name: Log in to GitHub Container Registry
@@ -117,6 +151,8 @@ jobs:
     env:
       # Every deployment verifies a fresh database without touching another run.
       COMPOSE_PROJECT_NAME: semcode-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+      REPORT: all
+      TOP_N: '10'
     steps:
       - name: Check out Compose and database files
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

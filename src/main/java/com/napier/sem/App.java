@@ -16,6 +16,9 @@ public class App {
 
     static int run(String[] args, Map<String, String> environment, PrintStream out, PrintStream err) {
         try {
+            if (args.length > 0 && args[0].startsWith("--")) {
+                return runReports(args, environment, out);
+            }
             int limit = parseLimit(args);
             String url = required(environment, "DB_URL");
             String user = required(environment, "DB_USER");
@@ -38,12 +41,51 @@ public class App {
         } catch (IllegalArgumentException exception) {
             err.println("Configuration error: " + exception.getMessage());
             return 1;
+        } catch (java.io.IOException exception) {
+            err.println("Could not save report output: " + exception.getMessage());
+            return 1;
         } catch (SQLException exception) {
             // Do not print connection URLs or credentials into CI logs.
             err.println("Database report failed (SQL state " + exception.getSQLState()
                     + "). Check database readiness, credentials and the World schema.");
             return 1;
         }
+    }
+
+    private static int runReports(String[] args, Map<String, String> environment, PrintStream out)
+            throws SQLException, java.io.IOException {
+        ReportOptions options = ReportOptions.parse(args);
+        if (options.help()) {
+            out.println("Usage: --report 1..32|all --limit N --filter PLACE --country CODE --output DIRECTORY");
+            out.println("Filters are required only for reports that name a location. Country scopes district/city names.");
+            for (var definition : ReportCatalogue.REPORTS) {
+                out.println(definition.id() + ": " + definition.title()
+                        + (definition.filterType().isEmpty() ? "" : " [filter: " + definition.filterType() + "]"));
+            }
+            return 0;
+        }
+        String url = required(environment, "DB_URL");
+        String user = required(environment, "DB_USER");
+        String password = required(environment, "DB_PASSWORD");
+        try (var connection = DriverManager.getConnection(url, user, password)) {
+            out.println("Successfully connected to the World database");
+            var repository = new ReportRepository(connection);
+            var exporter = options.output() == null ? null : new ReportExporter(options.output());
+            for (var request : options.requests()) {
+                var result = repository.run(request);
+                var buffer = new java.io.ByteArrayOutputStream();
+                try (var report = new PrintStream(buffer, true, java.nio.charset.StandardCharsets.UTF_8)) {
+                    report.println("Report " + request.id() + ": " + ReportCatalogue.get(request.id()).title());
+                    report.println("N=" + request.limit() + "; filter=" + request.filter() + "; country=" + request.country());
+                    result.print(report);
+                    report.println("Rows: " + result.rows().size());
+                }
+                String text = buffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+                out.print(text);
+                if (exporter != null) exporter.save(request, text);
+            }
+        }
+        return 0;
     }
 
     static int parseLimit(String[] args) {
